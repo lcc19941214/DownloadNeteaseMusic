@@ -32,10 +32,10 @@ const logger = log4js.getLogger('downloadLogs');
 
 const host = 'http://localhost:3000';
 
-function splitRawSongsContent(content: string): song[] {
+function splitRawSongsContent(content: string, divider = '	'): song[] {
   const songs: song[] = [];
   content.split('\n').forEach((line) => {
-    const [name, author] = line.split('	');
+    const [name, author] = line.split(divider);
     songs.push({
       name,
       author: author || undefined,
@@ -44,13 +44,13 @@ function splitRawSongsContent(content: string): song[] {
   return songs;
 }
 
-async function getSongsByFilename(filename: string): Promise<song[]> {
+async function getSongsByFilename(filename: string, divider: string): Promise<song[]> {
   const content = await readFile(filename, 'utf8');
-  return splitRawSongsContent(content);
+  return splitRawSongsContent(content, divider);
 }
 
-async function getSongsByText(text: string): Promise<song[]> {
-  return splitRawSongsContent(text);
+async function getSongsByText(text: string, divider: string): Promise<song[]> {
+  return splitRawSongsContent(text, divider);
 }
 
 async function getIdByKeywords(keywords: string): Promise<Search.SongsItem['id'] | null> {
@@ -102,14 +102,32 @@ async function downloadByUrl(url: string, filename: string): Promise<void> {
   await writeFile(filename, res.data);
 }
 
-async function main() {
-  const queue = Queue({ concurrency: 5 });
+type options = {
+  concurrency: number;
+  sourceFilename?: string;
+  source?: string;
+  divider: string;
+  outDir: string;
+};
+
+async function main(options: options) {
+  const { concurrency, sourceFilename, source, divider, outDir } = options;
+
+  const queue = Queue({ concurrency });
   queue.on('end', () => {
     console.log('All task finished');
   });
 
-  const dataFilename = path.join(__dirname, './data.txt');
-  const songs = await getSongsByFilename(dataFilename);
+  if (!source && !sourceFilename) {
+    throw Error('source or sourceFilename must be specified');
+  }
+
+  let songs: song[] = [];
+  if (source) {
+    songs = await getSongsByText(source, divider);
+  } else if (sourceFilename) {
+    songs = await getSongsByFilename(sourceFilename, divider);
+  }
 
   songs.forEach(({ name, author = '' }, index) => {
     const task = async () => {
@@ -120,7 +138,7 @@ async function main() {
         if (id) {
           const url = await getDownloadURLById(id);
           if (url) {
-            const songFilename = path.join(__dirname, '../download', songName);
+            const songFilename = path.join(outDir, songName);
             await downloadByUrl(url, songFilename);
           }
         }
@@ -135,4 +153,9 @@ async function main() {
   queue.start();
 }
 
-main();
+main({
+  concurrency: 5,
+  sourceFilename: path.join(__dirname, './data.txt'),
+  divider: '	',
+  outDir: path.join(__dirname, '../download'),
+});
