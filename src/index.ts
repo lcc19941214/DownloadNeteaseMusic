@@ -4,12 +4,12 @@ import util from 'util';
 import axios from 'axios';
 import Queue from 'queue';
 import log4js from 'log4js';
+import { getSongsByFilename, getSongsByText } from './utils';
 import { Search } from './types/search';
 import { Song } from './types/song';
 import { song } from './types/record';
 import { SearchParams, SongParams } from './types/request';
 
-const readFile = util.promisify(fs.readFile);
 const writeFile = util.promisify(fs.writeFile);
 
 log4js.configure({
@@ -31,27 +31,6 @@ log4js.configure({
 const logger = log4js.getLogger('downloadLogs');
 
 const host = 'http://localhost:3000';
-
-function splitRawSongsContent(content: string, divider = '	'): song[] {
-  const songs: song[] = [];
-  content.split('\n').forEach((line) => {
-    const [name, author] = line.split(divider);
-    songs.push({
-      name,
-      author: author || undefined,
-    });
-  });
-  return songs;
-}
-
-async function getSongsByFilename(filename: string, divider: string): Promise<song[]> {
-  const content = await readFile(filename, 'utf8');
-  return splitRawSongsContent(content, divider);
-}
-
-async function getSongsByText(text: string, divider: string): Promise<song[]> {
-  return splitRawSongsContent(text, divider);
-}
 
 async function getIdByKeywords(keywords: string): Promise<Search.SongsItem['id'] | null> {
   const res = await axios({
