@@ -11,25 +11,6 @@ import { song } from './types/record';
 import { SearchParams, SongParams } from './types/request';
 
 const writeFile = util.promisify(fs.writeFile);
-
-log4js.configure({
-  appenders: {
-    downloadLogs: {
-      type: 'file',
-      filename: path.join(__dirname, '../download.log'),
-    },
-    console: { type: 'console' },
-  },
-  categories: {
-    default: {
-      appenders: ['console', 'downloadLogs'],
-      level: 'trace',
-    },
-  },
-});
-
-const logger = log4js.getLogger('downloadLogs');
-
 const host = 'http://localhost:3000';
 
 async function getIdByKeywords(keywords: string): Promise<Search.SongsItem['id'] | null> {
@@ -69,7 +50,7 @@ async function getDownloadURLById(id: number): Promise<Song.DataItem['url'] | nu
   }
 }
 
-async function downloadByUrl(url: string, filename: string): Promise<void> {
+async function downloadByUrl(url: string): Promise<ArrayBuffer> {
   const res = await axios({
     responseType: 'arraybuffer',
     url,
@@ -78,7 +59,7 @@ async function downloadByUrl(url: string, filename: string): Promise<void> {
       'Content-Type': 'audio/mpeg',
     },
   });
-  await writeFile(filename, res.data);
+  return res.data;
 }
 
 type options = {
@@ -87,10 +68,30 @@ type options = {
   source?: string;
   divider: string;
   outDir: string;
+  dryRun?: boolean;
 };
 
 async function main(options: options) {
-  const { concurrency, sourceFilename, source, divider, outDir } = options;
+  const { concurrency, sourceFilename, source, divider, outDir, dryRun } = options;
+  const logFilename = dryRun ? 'download.dry-run.log' : 'download.log';
+
+  log4js.configure({
+    appenders: {
+      downloadLogs: {
+        type: 'file',
+        filename: path.join(__dirname, '..', logFilename),
+      },
+      console: { type: 'console' },
+    },
+    categories: {
+      default: {
+        appenders: ['console', 'downloadLogs'],
+        level: 'trace',
+      },
+    },
+  });
+
+  const logger = log4js.getLogger('downloadLogs');
 
   const queue = Queue({ concurrency });
   queue.on('end', () => {
@@ -112,14 +113,24 @@ async function main(options: options) {
     const task = async () => {
       const keywords = `${name} ${author}`.trim();
       const songName = `${index + 1}.${name}.mp3`;
+
       try {
         const id = await getIdByKeywords(keywords);
-        if (id) {
-          const url = await getDownloadURLById(id);
-          if (url) {
-            const songFilename = path.join(outDir, songName);
-            await downloadByUrl(url, songFilename);
-          }
+        if (!id) {
+          throw Error(`${songName} has no id`);
+        }
+
+        const url = await getDownloadURLById(id);
+        if (!url) {
+          throw Error(`${songName} has no url`);
+        }
+
+        const songFilename = path.join(outDir, songName);
+        const data = await downloadByUrl(url);
+        if (dryRun) {
+          console.log(`${songName} downloaded`);
+        } else {
+          await writeFile(songFilename, data);
         }
       } catch (error) {
         logger.error(`${songName} download failed\n`, error);
@@ -137,4 +148,5 @@ main({
   sourceFilename: path.join(__dirname, './data.txt'),
   divider: '	',
   outDir: path.join(__dirname, '../download'),
+  dryRun: true,
 });
