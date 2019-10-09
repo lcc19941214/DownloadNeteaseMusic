@@ -148,5 +148,5 @@ main({
   sourceFilename: path.join(__dirname, './data.txt'),
   divider: '	',
   outDir: path.join(__dirname, '../download'),
-  dryRun: true,
+  dryRun: process.env.DRY_RUN === 'true',
 });

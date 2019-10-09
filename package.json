@@ -5,6 +5,7 @@
   "license": "MIT",
   "scripts": {
     "start": "ts-node ./src/index.ts",
+    "dryrun": "DRY_RUN=true ts-node ./src/index.ts",
     "check": "ts-node ./src/check.ts"
   },
   "dependencies": {
