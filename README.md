@@ -46,10 +46,11 @@ yarn start --concurrency=5 \
 
 ## Options
 
-- `concurrency?: number` - Number of the songs when download in parallel
+- `concurrency?: number` - Number of the songs when download in parallel. Defaults to `5`.
 
 - `sourceFilename?: string` - File includes the source. See `source` for example.
-  *Notice: at least one of `sourceFilename` and `source` should be specified*
+
+  *Notice: at least one of `sourceFilename` and `source` should be specified.*
 
 - `source?: string` - Inline source. For example:
   ```plaintext
@@ -58,8 +59,8 @@ yarn start --concurrency=5 \
   我的九寨	泽尓丹
   ```
 
-- `divider?: string` - Divider to separate name and author. Support `Regexp` pattern
+- `divider?: string` - Divider to separate name and author. Support `Regexp` pattern. Defaults to `'\t'`.
 
-- `outDir: string` - Directory to store the songs
+- `outDir: string` - Directory to store the songs.
 
-- `dryrun?: boolean` - Whether the program should dry run or not
+- `dryrun?: boolean` - Whether the program should dry run or not.
