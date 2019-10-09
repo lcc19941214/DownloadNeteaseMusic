@@ -3,14 +3,12 @@ import path from 'path';
 import util from 'util';
 import axios from 'axios';
 import Queue from 'queue';
-import log4js from 'log4js';
-import { getSongsByFilename, getSongsByText } from './utils';
-import { Search } from './types/search';
-import { Song } from './types/song';
-import { song } from './types/record';
-import { SearchParams, SongParams } from './types/request';
+import minimist from 'minimist';
+import { getSongsByFilename, getSongsByText, getLogger } from './utils';
+import { Search, Song, song, SearchParams, SongParams, argv, Options } from './types/';
 
 const writeFile = util.promisify(fs.writeFile);
+const argv = minimist(process.argv.slice(2)) as argv;
 const host = 'http://localhost:3000';
 
 async function getIdByKeywords(keywords: string): Promise<Search.SongsItem['id'] | null> {
@@ -62,45 +60,21 @@ async function downloadByUrl(url: string): Promise<ArrayBuffer> {
   return res.data;
 }
 
-type options = {
-  concurrency: number;
-  sourceFilename?: string;
-  source?: string;
-  divider: string;
-  outDir: string;
-  dryRun?: boolean;
-};
-
-async function main(options: options) {
-  const { concurrency, sourceFilename, source, divider, outDir, dryRun } = options;
-  const logFilename = dryRun ? 'download.dry-run.log' : 'download.log';
-
-  log4js.configure({
-    appenders: {
-      downloadLogs: {
-        type: 'file',
-        filename: path.join(__dirname, '..', logFilename),
-      },
-      console: { type: 'console' },
-    },
-    categories: {
-      default: {
-        appenders: ['console', 'downloadLogs'],
-        level: 'trace',
-      },
-    },
-  });
-
-  const logger = log4js.getLogger('downloadLogs');
-
-  const queue = Queue({ concurrency });
-  queue.on('end', () => {
-    console.log('All task finished');
-  });
+async function main(options: Options) {
+  const { concurrency = 5, sourceFilename, source, divider, outDir, dryrun } = options;
 
   if (!source && !sourceFilename) {
     throw Error('source or sourceFilename must be specified');
   }
+  if (!outDir) {
+    throw Error('outDir must be specified');
+  }
+
+  const logger = getLogger(dryrun);
+  const queue = Queue({ concurrency });
+  queue.on('end', () => {
+    console.log('All task finished');
+  });
 
   let songs: song[] = [];
   if (source) {
@@ -127,13 +101,12 @@ async function main(options: options) {
 
         const songFilename = path.join(outDir, songName);
         const data = await downloadByUrl(url);
-        if (dryRun) {
-          console.log(`${songName} downloaded`);
-        } else {
+        if (!dryrun) {
           await writeFile(songFilename, data);
         }
+        console.log(`[DONE] ${songName}`);
       } catch (error) {
-        logger.error(`${songName} download failed\n`, error);
+        logger.error(`[FAILED] ${songName}`, '\n', error);
       }
     };
 
@@ -143,10 +116,4 @@ async function main(options: options) {
   queue.start();
 }
 
-main({
-  concurrency: 5,
-  sourceFilename: path.join(__dirname, './data.txt'),
-  divider: '	',
-  outDir: path.join(__dirname, '../download'),
-  dryRun: process.env.DRY_RUN === 'true',
-});
+main(argv);

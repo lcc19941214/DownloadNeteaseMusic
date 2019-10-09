@@ -1,20 +1,23 @@
 {
   "name": "download_netease_music",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "src/index",
   "license": "MIT",
   "scripts": {
     "start": "ts-node ./src/index.ts",
-    "dryrun": "DRY_RUN=true ts-node ./src/index.ts",
-    "check": "ts-node ./src/check.ts"
+    "dryrun": "yarn start --dryrun",
+    "check": "ts-node ./src/check.ts",
+    "example": "yarn start --concurrency=5 --sourceFilename='./example/data.txt' --divider='\t' --outDir='./example/download' --dryrun"
   },
   "dependencies": {
     "axios": "^0.19.0",
+    "minimist": "^1.2.0",
     "queue": "^6.0.1",
     "ts-node": "^8.4.1",
     "typescript": "^3.6.3"
   },
   "devDependencies": {
+    "@types/minimist": "^1.2.0",
     "@types/node": "^12.7.11",
     "@typescript-eslint/eslint-plugin": "^2.3.3",
     "@typescript-eslint/parser": "^2.3.3",

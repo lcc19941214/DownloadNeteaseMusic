@@ -1,3 +1,18 @@
+import minimist from 'minimist';
+
+export type song = {
+  name: string;
+  author?: string;
+};
+
+export type SearchParams = {
+  keywords?: string;
+};
+
+export type SongParams = {
+  id?: number;
+};
+
 export declare namespace Search {
   export interface Res {
     result: Result;
@@ -57,3 +72,40 @@ export declare namespace Search {
     trans: null;
   }
 }
+
+export declare namespace Song {
+  export interface Res {
+    data: DataItem[];
+    code: number;
+  }
+  export interface DataItem {
+    id: number;
+    url: string;
+    br: number;
+    size: number;
+    md5: string;
+    code: number;
+    expi: number;
+    type: string;
+    gain: number;
+    fee: number;
+    uf: null;
+    payed: number;
+    flag: number;
+    canExtend: boolean;
+    freeTrialInfo: null;
+    level: string;
+    encodeType: string;
+  }
+}
+
+export interface Options {
+  concurrency?: number;
+  sourceFilename?: string;
+  source?: string;
+  divider?: string;
+  outDir: string;
+  dryrun?: boolean;
+}
+
+export type argv = Options & minimist.ParsedArgs;
