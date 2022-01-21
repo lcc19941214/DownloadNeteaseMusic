@@ -23,6 +23,6 @@
     "@typescript-eslint/parser": "^2.3.3",
     "eslint": "^6.5.1",
     "json-ts": "^1.6.4",
-    "log4js": "^5.2.0"
+    "log4js": "^6.4.0"
   }
 }
